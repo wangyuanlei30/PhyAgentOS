@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="oea-logo-v3-full_mmmxy7a5.jpg" alt="OpenEmbodiedAgent Logo" width="600"/>
+  <img src="oea-logo-v3-full_mmmxy7a5.png" alt="OpenEmbodiedAgent Logo" width="600"/>
 </p>
 
 # OpenEmbodiedAgent
