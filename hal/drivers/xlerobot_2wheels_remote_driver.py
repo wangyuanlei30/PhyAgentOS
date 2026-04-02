@@ -1,16 +1,19 @@
-"""Remote XLerobot2Wheels driver backed by lerobot ZMQ client."""
+"""Remote XLerobot2Wheels driver backed by an OEA-owned ZMQ client."""
 
 from __future__ import annotations
 
 import copy
 import os
-import sys
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from hal.base_driver import BaseDriver
+from hal.drivers.xlerobot_2wheels_remote_client import (
+    XLerobot2WheelsRemoteClient,
+    XLerobot2WheelsRemoteClientConfig,
+)
 
 _PROFILES_DIR = Path(__file__).resolve().parent.parent / "profiles"
 
@@ -48,35 +51,53 @@ class XLerobot2WheelsRemoteDriver(BaseDriver):
         max_move_duration_s: float | None = None,
         safe_max_linear_m_s: float | None = None,
         safe_max_angular_deg_s: float | None = None,
-        lerobot_src: str | None = None,
         reconnect_policy: str = "auto",
         **_kwargs: Any,
     ) -> None:
         self._gui = gui
-        self.remote_ip = (remote_ip or os.environ.get("OEA_XLEROBOT_REMOTE_IP", "192.168.86.31")).strip()
-        self.cmd_port = cmd_port or _parse_int(os.environ.get("OEA_XLEROBOT_CMD_PORT"), 5555)
-        self.obs_port = obs_port or _parse_int(os.environ.get("OEA_XLEROBOT_OBS_PORT"), 5556)
-        self.robot_id = (robot_id or os.environ.get("OEA_XLEROBOT_ROBOT_ID") or "my_xlerobot_2wheels_lab").strip()
-        self.loop_hz = max(loop_hz or _parse_float(os.environ.get("OEA_XLEROBOT_LOOP_HZ"), 20.0), 1.0)
+        self.remote_ip = (
+            remote_ip
+            if remote_ip is not None
+            else os.environ.get("OEA_XLEROBOT_REMOTE_IP", "192.168.86.31")
+        ).strip()
+        self.cmd_port = (
+            cmd_port
+            if cmd_port is not None
+            else _parse_int(os.environ.get("OEA_XLEROBOT_CMD_PORT"), 5555)
+        )
+        self.obs_port = (
+            obs_port
+            if obs_port is not None
+            else _parse_int(os.environ.get("OEA_XLEROBOT_OBS_PORT"), 5556)
+        )
+        self.robot_id = (
+            robot_id
+            if robot_id is not None
+            else (os.environ.get("OEA_XLEROBOT_ROBOT_ID") or "my_xlerobot_2wheels_lab")
+        ).strip()
+        self.loop_hz = max(
+            loop_hz
+            if loop_hz is not None
+            else _parse_float(os.environ.get("OEA_XLEROBOT_LOOP_HZ"), 20.0),
+            1.0,
+        )
         self.max_move_duration_s = max(
             max_move_duration_s
-            or _parse_float(os.environ.get("OEA_XLEROBOT_MAX_MOVE_DURATION_S"), 10.0),
+            if max_move_duration_s is not None
+            else _parse_float(os.environ.get("OEA_XLEROBOT_MAX_MOVE_DURATION_S"), 10.0),
             0.1,
         )
         self.safe_max_linear_m_s = max(
             safe_max_linear_m_s
-            or _parse_float(os.environ.get("OEA_XLEROBOT_SAFE_MAX_LINEAR_M_S"), 0.4),
+            if safe_max_linear_m_s is not None
+            else _parse_float(os.environ.get("OEA_XLEROBOT_SAFE_MAX_LINEAR_M_S"), 0.4),
             0.0,
         )
         self.safe_max_angular_deg_s = max(
             safe_max_angular_deg_s
-            or _parse_float(os.environ.get("OEA_XLEROBOT_SAFE_MAX_ANGULAR_DEG_S"), 120.0),
+            if safe_max_angular_deg_s is not None
+            else _parse_float(os.environ.get("OEA_XLEROBOT_SAFE_MAX_ANGULAR_DEG_S"), 120.0),
             0.0,
-        )
-        self.lerobot_src = (
-            lerobot_src
-            or os.environ.get("OEA_LEROBOT_SRC")
-            or "/home/ubuntu/lerobot/src"
         )
         self.reconnect_policy = reconnect_policy
 
@@ -200,30 +221,13 @@ class XLerobot2WheelsRemoteDriver(BaseDriver):
         self.disconnect()
 
     def _build_client(self):
-        source = Path(self.lerobot_src).expanduser().resolve()
-        source_str = str(source)
-        if source_str not in sys.path:
-            sys.path.insert(0, source_str)
-
-        try:
-            from lerobot.robots.xlerobot_2wheels import (  # type: ignore
-                XLerobot2WheelsClient,
-                XLerobot2WheelsClientConfig,
-            )
-        except Exception as exc:
-            raise RuntimeError(
-                "Failed to import lerobot xlerobot_2wheels client. "
-                f"Check OEA_LEROBOT_SRC ({source}) and dependencies (draccus/pyzmq). "
-                f"Original error: {exc}"
-            ) from exc
-
-        config = XLerobot2WheelsClientConfig(
+        config = XLerobot2WheelsRemoteClientConfig(
             id=self.robot_id,
             remote_ip=self.remote_ip,
             port_zmq_cmd=self.cmd_port,
             port_zmq_observations=self.obs_port,
         )
-        return XLerobot2WheelsClient(config)
+        return XLerobot2WheelsRemoteClient(config)
 
     def _validate_robot_id(self, params: dict[str, Any]) -> None:
         requested = str(params.get("robot_id", "")).strip()

@@ -38,10 +38,9 @@ The physical robot host runs on Jetson Orin NX (`xlerobot_2wheels_host`), while 
 ## Connection
 
 - **Transport**: ZMQ (PUSH/PULL)
-- **Host**: `OEA_XLEROBOT_REMOTE_IP`
-- **Command Port**: `OEA_XLEROBOT_CMD_PORT` (default `5555`)
-- **Observation Port**: `OEA_XLEROBOT_OBS_PORT` (default `5556`)
-- **Source Path**: `OEA_LEROBOT_SRC` (default `/home/ubuntu/lerobot/src`)
+- **Preferred driver config keys**: `remote_ip`, `cmd_port`, `obs_port`, `robot_id`, `loop_hz`, `max_move_duration_s`, `safe_max_linear_m_s`, `safe_max_angular_deg_s`, `reconnect_policy`
+- **Watchdog CLI**: `python hal/hal_watchdog.py --driver xlerobot_2wheels_remote --driver-config <json>`
+- **Environment fallback**: `OEA_XLEROBOT_REMOTE_IP`, `OEA_XLEROBOT_CMD_PORT`, `OEA_XLEROBOT_OBS_PORT`, `OEA_XLEROBOT_ROBOT_ID`, `OEA_XLEROBOT_LOOP_HZ`, `OEA_XLEROBOT_MAX_MOVE_DURATION_S`, `OEA_XLEROBOT_SAFE_MAX_LINEAR_M_S`, `OEA_XLEROBOT_SAFE_MAX_ANGULAR_DEG_S`
 - **Reconnect Policy**: auto by default in health checks
 
 ## Runtime Protocol

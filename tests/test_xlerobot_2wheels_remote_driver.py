@@ -113,6 +113,37 @@ def test_connect_robot_client_failure_returns_diagnostic_error(monkeypatch) -> N
     assert "connect failed" in result
 
 
+def test_constructor_kwargs_override_environment(monkeypatch) -> None:
+    monkeypatch.setenv("OEA_XLEROBOT_REMOTE_IP", "10.0.0.99")
+    monkeypatch.setenv("OEA_XLEROBOT_CMD_PORT", "9001")
+    monkeypatch.setenv("OEA_XLEROBOT_OBS_PORT", "9002")
+    monkeypatch.setenv("OEA_XLEROBOT_ROBOT_ID", "env_robot")
+    monkeypatch.setenv("OEA_XLEROBOT_LOOP_HZ", "5")
+    monkeypatch.setenv("OEA_XLEROBOT_MAX_MOVE_DURATION_S", "3")
+    monkeypatch.setenv("OEA_XLEROBOT_SAFE_MAX_LINEAR_M_S", "0.1")
+    monkeypatch.setenv("OEA_XLEROBOT_SAFE_MAX_ANGULAR_DEG_S", "30")
+
+    driver = XLerobot2WheelsRemoteDriver(
+        remote_ip="127.0.0.1",
+        cmd_port=5555,
+        obs_port=5556,
+        robot_id="xlerobot_2wheels_001",
+        loop_hz=20.0,
+        max_move_duration_s=10.0,
+        safe_max_linear_m_s=0.4,
+        safe_max_angular_deg_s=120.0,
+    )
+
+    assert driver.remote_ip == "127.0.0.1"
+    assert driver.cmd_port == 5555
+    assert driver.obs_port == 5556
+    assert driver.robot_id == "xlerobot_2wheels_001"
+    assert driver.loop_hz == 20.0
+    assert driver.max_move_duration_s == 10.0
+    assert driver.safe_max_linear_m_s == 0.4
+    assert driver.safe_max_angular_deg_s == 120.0
+
+
 def test_move_base_repeats_by_loop_rate_and_auto_stops(monkeypatch) -> None:
     driver, client = _driver_with_fake_client(monkeypatch)
     assert driver.execute_action("connect_robot", {}) == "Robot connection established."
