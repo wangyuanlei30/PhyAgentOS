@@ -22,7 +22,11 @@ class _FakeResponse:
 
 
 class _FakeProvider:
+    def __init__(self):
+        self.messages = []
+
     async def chat_with_retry(self, messages, model):  # noqa: ANN001
+        self.messages.append({"messages": messages, "model": model})
         return _FakeResponse("VALID")
 
 
@@ -89,7 +93,8 @@ def _enable_mock_depth_success(bridge) -> None:  # noqa: ANN001
 
 def test_target_navigation_writes_action_md(tmp_path: Path) -> None:
     _write_workspace_files(tmp_path)
-    action_tool = EmbodiedActionTool(workspace=tmp_path, provider=_FakeProvider(), model="fake")
+    provider = _FakeProvider()
+    action_tool = EmbodiedActionTool(workspace=tmp_path, provider=provider, model="fake")
     tool = TargetNavigationTool(workspace=tmp_path, action_tool=action_tool)
 
     result = asyncio.run(
@@ -102,9 +107,15 @@ def test_target_navigation_writes_action_md(tmp_path: Path) -> None:
     )
 
     assert "validated and dispatched" in result
-    action_doc = (tmp_path / "ACTION.md").read_text(encoding="utf-8")
-    assert "target_navigation" in action_doc
-    assert '"target_label": "cup"' in action_doc
+    action_doc_text = (tmp_path / "ACTION.md").read_text(encoding="utf-8")
+    assert "target_navigation" in action_doc_text
+    assert '"target_label": "cup"' in action_doc_text
+    action_doc = json.loads(action_doc_text.split(_FENCE_OPEN, 1)[1].split(_FENCE_CLOSE, 1)[0])
+    assert action_doc["schema_version"] == "PhyAgentOS.action_queue.v1"
+    assert action_doc["actions"][0]["action_type"] == "target_navigation"
+    assert action_doc["actions"][0]["parameters"]["target_label"] == "cup"
+    prompt = provider.messages[-1]["messages"][0]["content"]
+    assert "do not require the target to already exist in the scene graph" in prompt
 
 
 def test_target_navigation_reports_missing_target_label(tmp_path: Path) -> None:
